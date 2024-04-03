@@ -13,8 +13,6 @@ IFF_NO_PI = 0x1000
 
 PROTO_NUMBER_ICMP = 1
 
-IP_A = "0.0.0.0"
-
 CLIENT_IP="10.9.0.5"
 CLIENT_PORT = 9090
 CLIENT_TUN_GATEWAY="192.168.53.99"
@@ -26,7 +24,7 @@ SERVER_TUN_GATEWAY="192.168.53.98"
 PRIVATE_NETWORK_SUBNET="192.168.60.0/24"
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((IP_A, SERVER_PORT))
+sock.bind((SERVER_IP, SERVER_PORT))
 
 # Create the tun interface
 tun = os.open("/dev/net/tun", os.O_RDWR)

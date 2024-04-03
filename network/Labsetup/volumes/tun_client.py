@@ -13,8 +13,6 @@ IFF_NO_PI = 0x1000
 
 PROTO_NUMBER_ICMP = 1
 
-IP_A = "0.0.0.0"
-
 CLIENT_IP="10.9.0.5"
 CLIENT_PORT = 9090
 CLIENT_TUN_GATEWAY="192.168.53.99"
@@ -39,7 +37,7 @@ os.system("ip link set dev {} up".format(ifname))
 
 # Create UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((IP_A, CLIENT_PORT))
+sock.bind((CLIENT_IP, CLIENT_PORT))
 
 os.system("ip route add {} dev {} via {}".format(PRIVATE_NETWORK_SUBNET,ifname, CLIENT_TUN_GATEWAY))
 
