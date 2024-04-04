@@ -10,7 +10,7 @@ services:
         devices:
                 - "/dev/net/tun:/dev/net/tun"
         volumes:
-                - ./volumes:/volumes
+                - ./volumes-client:/volumes-client
         networks:
             net-10.9.0.0:
                 ipv4_address: 10.9.0.5
@@ -61,7 +61,7 @@ services:
         sysctls:
                 - net.ipv4.ip_forward=1
         volumes:
-                - ./volumes:/volumes
+                - ./volumes-server:/volumes-server
         networks:
             net-10.9.0.0:
                 ipv4_address: 10.9.0.11
