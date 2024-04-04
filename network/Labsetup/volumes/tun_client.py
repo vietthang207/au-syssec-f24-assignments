@@ -22,8 +22,10 @@ SERVER_PORT=9090
 SERVER_TUN_GATEWAY="192.168.53.99"
 PRIVATE_NETWORK_SUBNET="192.168.60.0/24"
 
-PATH_CERT_FILE="cert.pem"
-PATH_KEY_FILE="key.pem"
+CLIENT_CERT_FILE="client-cert.pem"
+CLIENT_KEY_FILE="client-key.pem"
+SERVER_CERT_FILE="server-cert.pem"
+SERVER_KEY_FILE="server-key.pem"
 
 # Create the tun interface
 tun = os.open("/dev/net/tun", os.O_RDWR)
@@ -34,42 +36,30 @@ print("Interface Name: {}".format(ifname))
 os.system("ip addr add {}/24 dev {}".format(CLIENT_TUN_GATEWAY, ifname))
 os.system("ip link set dev {} up".format(ifname))
 
+# Add route
 os.system("ip route add {} dev {} via {}".format(PRIVATE_NETWORK_SUBNET,ifname, CLIENT_TUN_GATEWAY))
 
-# Create UDP socket
-ingress_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-ingress_context.load_cert_chain(certfile=PATH_CERT_FILE, keyfile=PATH_KEY_FILE)
-ingress_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-ingress_socket.bind((CLIENT_IP, CLIENT_PORT))
-ingress_socket.listen(1)
-
-egress_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT, check_hostname=False)
-egress_context.load_verify_locations(PATH_CERT_FILE)
-egress_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# egress_tls_socket = egress_context.wrap_socket(egress_socket)
-egress_tls_socket = egress_context.wrap_socket(egress_socket, server_hostname=SERVER_IP)
+# Create context
+context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+context.load_cert_chain(certfile=CLIENT_CERT_FILE, keyfile=CLIENT_KEY_FILE)
+context.verify_mode = ssl.CERT_REQUIRED
+context.load_verify_locations(SERVER_CERT_FILE)
+# Create TLS socket
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tls_socket = context.wrap_socket(tcp_socket, server_side=False, server_hostname=SERVER_IP)
 while True:
     try:
-        egress_tls_socket.connect((SERVER_IP, SERVER_PORT))
+        tls_socket.connect((SERVER_IP, SERVER_PORT))
         break
     except Exception as e:
         print(e)
         time.sleep(1)
 
-ingress_connection, fromaddr = ingress_socket.accept()
-# ingress_tls_connection = ingress_context.wrap_socket(ingress_connection, server_side=True)
-print("accept conn from {}".format(fromaddr))
-
-# sock.sendall(b'Hello, world')
-# context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-# context.load_cert_chain(certfile=PATH_CERT_FILE, keyfile=PATH_KEY_FILE)
-
 while True:
-    ready, _, _ = select.select([ingress_connection, tun], [], [])
+    ready, _, _ = select.select([tls_socket, tun], [], [])
     for fd in ready:
-        if fd is ingress_connection:
-            data = ingress_connection.recv(2048)
-            # data, (ip, port) = sock.recvfrom(2048)
+        if fd is tls_socket:
+            data = tls_socket.recv(2048)
             pkt = IP(data)
             print("From socket <==: {} --> {}".format(pkt.src, pkt.dst))
             os.write(tun, data)
@@ -78,11 +68,4 @@ while True:
             packet = os.read(tun, 2048)
             pkt = IP(packet)
             print("From tun ==>: {} --> {}".format(pkt.src, pkt.dst))
-            # sock.connect((SERVER_IP, SERVER_PORT))
-            # sock.connect((SERVER_IP, SERVER_PORT))
-            # sock.send(packet)
-            print("sending")
-            # sock.sendall(b'Hello, world')
-            egress_tls_socket.send(bytes(pkt))
-            # sock.sendto(packet, (SERVER_IP, SERVER_PORT))
-            # sock.close()
+            tls_socket.send(bytes(pkt))
