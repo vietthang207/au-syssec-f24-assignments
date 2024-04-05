@@ -15,11 +15,10 @@ IFF_NO_PI = 0x1000
 PROTO_NUMBER_ICMP = 1
 
 CLIENT_IP="10.9.0.5"
-CLIENT_PORT = 9090
-CLIENT_TUN_GATEWAY="192.168.53.5"
+CLIENT_TUN_IP="192.168.53.5"
 SERVER_IP="10.9.0.11"
 SERVER_PORT=9090
-SERVER_TUN_GATEWAY="192.168.53.11"
+SERVER_TUN_IP="192.168.53.11"
 PRIVATE_NETWORK_SUBNET="192.168.60.0/24"
 
 CLIENT_CERT_FILE="client-cert.pem"
@@ -33,11 +32,11 @@ ifr = struct.pack('16sH', b'tun%d', IFF_TUN | IFF_NO_PI)
 ifname_bytes  = fcntl.ioctl(tun, TUNSETIFF, ifr)
 ifname = ifname_bytes.decode('UTF-8')[:16].strip("\x00")
 print("Interface Name: {}".format(ifname))
-os.system("ip addr add {}/24 dev {}".format(CLIENT_TUN_GATEWAY, ifname))
+os.system("ip addr add {}/24 dev {}".format(CLIENT_TUN_IP, ifname))
 os.system("ip link set dev {} up".format(ifname))
 
 # Add route
-os.system("ip route add {} dev {} via {}".format(PRIVATE_NETWORK_SUBNET,ifname, CLIENT_TUN_GATEWAY))
+os.system("ip route add {} dev {} via {}".format(PRIVATE_NETWORK_SUBNET,ifname, CLIENT_TUN_IP))
 
 # Create context
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
